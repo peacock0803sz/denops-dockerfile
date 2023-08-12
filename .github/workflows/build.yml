@@ -50,6 +50,3 @@ jobs:
             make DENOPS_VERSION=$(echo $DENOPS_VERSION | sed -r 's/(v[0-9]+)(\.[0-9]+)(\.[0-9]+)/\1\2/') push
           fi
           make DENOPS_VERSION=latest push
-
-
-      - run: make DENOPS_VERSION=${{ steps.vars.outputs.DENOPS_VERSION }} push
