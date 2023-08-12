@@ -1,5 +1,5 @@
 DENOPS_VERSION := main
-DOCKER_REGISTRY := ghcr.io/peacock0803sz
+DOCKER_REGISTRY := ghcr.io/peacock0803sb
 
 .DEFAULT_GOAL := help
 
