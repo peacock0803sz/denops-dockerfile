@@ -1,5 +1,6 @@
 DENOPS_VERSION := main
 DOCKER_REGISTRY := ghcr.io/peacock0803sz
+DOCKER_TAG := latest
 
 .DEFAULT_GOAL := help
 
@@ -27,11 +28,11 @@ build-neovim: FORCE	## Build (Neovim)
 push: push-vim push-neovim	## Push
 
 push-vim: FORCE	## Push (Vim)
-	docker tag ${DOCKER_REGISTRY}/vim ${DOCKER_REGISTRY}/vim:${DENOPS_VERSION}
-	docker push ${DOCKER_REGISTRY}/vim:${DENOPS_VERSION}
+	docker tag ${DOCKER_REGISTRY}/vim ${DOCKER_REGISTRY}/vim:${DOCKER_TAG}
+	docker push ${DOCKER_REGISTRY}/vim:${DOCKER_TAG}
 
 push-neovim: FORCE	## Push (Neovim)
-	docker tag ${DOCKER_REGISTRY}/neovim ${DOCKER_REGISTRY}/neovim:${DENOPS_VERSION}
-	docker push ${DOCKER_REGISTRY}/neovim:${DENOPS_VERSION}
+	docker tag ${DOCKER_REGISTRY}/neovim ${DOCKER_REGISTRY}/neovim:${DOCKER_TAG}
+	docker push ${DOCKER_REGISTRY}/neovim:${DOCKER_TAG}
 
 FORCE:
