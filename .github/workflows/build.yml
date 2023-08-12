@@ -49,4 +49,4 @@ jobs:
             # vX.Y.Z -> vX.Y (major and minor)
             make DENOPS_VERSION=$(echo ${{ env.DENOPS_VERSION }} | sed -r 's/(v[0-9]+)(\.[0-9]+)(\.[0-9]+)/\1\2/') push
           fi
-          make DENOPS_VERSION=latest push
+          make push
