@@ -12,14 +12,22 @@ help:
 build: build-vim build-neovim	## Build
 
 build-vim: FORCE	## Build (Vim)
-	docker build ${BUILD_ARGS} \
+	docker buildx build ${BUILD_ARGS} \
+		--load \
+			--cache-from=${DOCKER_REGISTRY}/vim/cache \
+			--cache-from=${DOCKER_REGISTRY}/vim \
+			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/vim/cache,mode=max \
 		--build-arg DENOPS_VERSION=${DENOPS_VERSION} \
 		-t denops-dockerfile/vim \
 		-f Dockerfile.vim \
 		.
 
 build-neovim: FORCE	## Build (Neovim)
-	docker build ${BUILD_ARGS} \
+	docker buildx build ${BUILD_ARGS} \
+		--load \
+			--cache-from=${DOCKER_REGISTRY}/neovim/cache \
+			--cache-from=${DOCKER_REGISTRY}/neovim \
+			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/neovim/cache,mode=max \
 		--build-arg DENOPS_VERSION=${DENOPS_VERSION} \
 		-t denops-dockerfile/neovim \
 		-f Dockerfile.neovim \
