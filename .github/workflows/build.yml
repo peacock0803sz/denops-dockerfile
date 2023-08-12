@@ -41,7 +41,7 @@ jobs:
           DENOPS_VERSION: ${{ steps.vars.outputs.DENOPS_VERSION }}
         shell: bash
         run: |
-          if [[ ${{ env.DENOPS_VERSION }} == "v*" ]]; then
+          if [[ ${{ env.DENOPS_VERSION }} == v* ]]; then
             # Full version string
             make DENOPS_VERSION={{ env.DENOPS_VERSION }} push
             # vX.Y.Z -> vX (major only)
