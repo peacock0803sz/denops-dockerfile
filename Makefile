@@ -12,10 +12,6 @@ build: build-vim build-neovim	## Build
 
 build-vim: FORCE	## Build (Vim)
 	docker buildx build ${BUILD_ARGS} \
-		--load \
-			--cache-from=${DOCKER_REGISTRY}/vim/cache \
-			--cache-from=${DOCKER_REGISTRY}/vim \
-			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/vim/cache,mode=max \
 		--build-arg DENOPS_VERSION=${DENOPS_VERSION} \
 		-t ${DOCKER_REGISTRY}/vim \
 		-f Dockerfile.vim \
@@ -23,10 +19,6 @@ build-vim: FORCE	## Build (Vim)
 
 build-neovim: FORCE	## Build (Neovim)
 	docker buildx build ${BUILD_ARGS} \
-		--load \
-			--cache-from=${DOCKER_REGISTRY}/neovim/cache \
-			--cache-from=${DOCKER_REGISTRY}/neovim \
-			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/neovim/cache,mode=max \
 		--build-arg DENOPS_VERSION=${DENOPS_VERSION} \
 		-t ${DOCKER_REGISTRY}/neovim \
 		-f Dockerfile.neovim \
