@@ -1,5 +1,5 @@
 DENOPS_VERSION := main
-DOCKER_REGISTRY := ghcr.io/vim-denops
+DOCKER_REGISTRY := ghcr.io/peacock0803sz
 
 .DEFAULT_GOAL := help
 
