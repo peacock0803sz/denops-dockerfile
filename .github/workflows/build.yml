@@ -50,7 +50,7 @@ jobs:
             make DENOPS_VERSION=$DENOPS_VERSION DOCKER_TAG=$DOCKER_TAG_MAJOR build
             make DOCKER_TAG=$DOCKER_TAG_MAJOR push
             # vX.Y.Z -> vX.Y (major and minor)
-            export DOCKER_TAG_MINOR=$(echo $DENOPS_VERSION | sed -r 's/(v[0-9]+)(\.[0-9]+)(\.[0-9]+)/\1/\2')
+            export DOCKER_TAG_MINOR=$(echo $DENOPS_VERSION | sed -r 's/(v[0-9]+)(\.[0-9]+)(\.[0-9]+)/\1\2/')
             make DENOPS_VERSION=$DENOPS_VERSION DOCKER_TAG=$DOCKER_TAG_MINOR build
             make DOCKER_TAG=$DOCKER_TAG_MINOR push
           fi
