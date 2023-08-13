@@ -11,45 +11,208 @@ on:
         required: false
         default: "v5.0.0"  # or "main"
 
+env:
+  DENOPS_VERSION: "v5.0.0"
+
 jobs:
-  build:
+  base_denops:
     permissions:
       packages: write
-      
+
     runs-on: ubuntu-latest
+    outputs:
+      denops_version: ${{ steps.get_version.outputs.denops_version }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: docker/setup-buildx-action@v1
-      - uses: docker/login-action@v1
+      - uses: actions/checkout@v3
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Get DENOPS_VERSION
-        id: vars
+        id: get_version
         run: |
           if [[ -z "${{ github.event.inputs.denops_version }}" ]]; then
-            echo '::set-output name=DENOPS_VERSION::v5.0.0'
+            echo 'denops_version=${{ env.DENOPS_VERSION }}' >> "$GITHUB_OUTPUT"
           else
-            echo '::set-output name=DENOPS_VERSION::${{ github.event.inputs.denops_version }}'
+            echo 'denops_version=${{ github.event.inputs.denops_version }}' >> "$GITHUB_OUTPUT"
           fi
         shell: bash
 
-      - name: Build and Push to ghcr.io
-        env:
-          DENOPS_VERSION: ${{ steps.vars.outputs.DENOPS_VERSION }}
+      - name: Build denops base
+        uses: docker/build-push-action@v4
+        with:
+          file: Dockerfile.denops
+          cache-from:
+            ghcr.io/peacock0803sz/denops-cache/base-denops:${{ matrix.denops_version }}
+            ghcr.io/peacock0803sz/denops-cache/base-denops
+          cache-to:
+            ghcr.io/peacock0803sz/denops-cache/base-denops:${{ matrix.denops_version }}
+            ghcr.io/peacock0803sz/denops-cache/base-denops
+          build-args: |
+            DENOPS_VERSION=${{ steps.denops_version.outputs.DENOPS_VERSION }}
+          tags: base-denops:${{ steps.denops_version.outputs.DENOPS_VERSION }}
+          outputs: type=docker,dest=/tmp/base-denops.tar
+          platforms: linux/amd64,linux/arm64
+          push: false
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: base-denops
+          path: /tmp/base-denops.tar
+
+  build_vim:
+    permissions:
+      packages: write
+
+    strategy:
+      matrix:
+        platform: [ "amd64", "arm64" ]
+        vim_version: [ "v9.0.1499" ]
+
+    runs-on: ubuntu-latest
+    needs: [ base_denops ]
+    env:
+      DENOPS_VERSION: ${{ needs.base_denops.outputs.denops_version }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Vim base
+        uses: docker/build-push-action@v4
+        with:
+          file: Dockerfile.vim
+          cache-from:
+            ghcr.io/peacock0803sz/denops-cache/base-vim:${{ matrix.vim_version }}
+            ghcr.io/peacock0803sz/denops-cache/base-vim
+          cache-to:
+            ghcr.io/peacock0803sz/denops-cache/base-vim:${{ matrix.vim_version }}
+            ghcr.io/peacock0803sz/denops-cache/base-vim
+          build-args: |
+            VIM_VERSION=${{ matrix.vim_version }}
+          tags: base-vim:${{ matrix.vim_version }}
+          platforms: linux/amd64,linux/arm64
+          push: false
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: base-denops
+          path: /tmp
+      - run: docker load --input /tmp/base-denops.tar
+
+      - uses: docker/metadata-action@v4
+        id: metadata
+        with:
+          tags: |
+            type=semver,pattern={{version}}-${{ matrix.vim_version }},value=${{ env.DENOPS_VERSION }}
+            type=semver,pattern={{major}}.{{minor}}-${{ matrix.vim_version }},value=${{ env.DENOPS_VERSION }}
+            type=semver,pattern={{major}}-${{ matrix.vim_version }},value=${{ env.DENOPS_VERSION }}
+            type=sha
+
+      - name: Build denops/vim for ${{ matrix.platform }}
+        uses: docker/build-push-action@v4
+        with:
+          file: Dockerfile.${{ matrix.platform }}-vim
+          cache-from:
+            ghcr.io/peacock0803sz/denops-cache/base-denops:${{ matrix.denops_version }}
+            ghcr.io/peacock0803sz/denops-cache/base-denops
+            ghcr.io/peacock0803sz/denops-cache/base-vim:${{ matrix.vim_version }}
+            ghcr.io/peacock0803sz/denops-cache/base-vim
+            ghcr.io/peacock0803sz/denops-cache/denops-vim:${{ matrix.vim_version }}
+            ghcr.io/peacock0803sz/denops-cache/denops-vim
+          cache-to:
+            ghcr.io/peacock0803sz/denops-cache/denops-vim:${{ matrix.vim_version }}
+            ghcr.io/peacock0803sz/denops-cache/denops-vim
+          build-args: |
+            DENOPS_VERSION=${{ env.DENOPS_VERSION }}
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          platforms: linux/${{ matrix.platform }}
+          push: true
+
+  build_neovim:
+    permissions:
+      packages: write
+
+    strategy:
+      matrix:
+        platform: [ "amd64", "arm64" ]
+        neovim_version: [ "v0.8.0", "v0.9.0", "stable", "nightly" ]
+
+    runs-on: ubuntu-latest
+    needs: [ base_denops ]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Neovim base
+        uses: docker/build-push-action@v4
+        with:
+          file: Dockerfile.neovim
+          cache-from:
+            ghcr.io/peacock0803sz/denops-cache/base-neovim:${{ matrix.neovim_version }}
+            ghcr.io/peacock0803sz/denops-cache/base-neovim
+          cache-to:
+            ghcr.io/peacock0803sz/denops-cache/base-neovim:${{ matrix.neovim_version }}
+            ghcr.io/peacock0803sz/denops-cache/base-neovim
+          build-args: |
+            NEOVIM_VERSION=${{ matrix.neovim_version }}
+          tags: base-neovim:${{ matrix.neovim_version }}
+          platforms: linux/${{ matrix.platform }}
+          push: false
+
+      - name: Get Neovim version string
+        id: neovim_version
         shell: bash
-        run: |
-          make DENOPS_VERSION=$DENOPS_VERSION build
-          export DENOPS_VERSION=${{ env.DENOPS_VERSION }}
-          if [[ $DENOPS_VERSION == v* ]]; then
-            # Full version string
-            make DOCKER_TAG=$DENOPS_VERSION push
-            # vX.Y.Z -> vX.Y (major and minor)
-            export DOCKER_TAG_MINOR=$(echo $DENOPS_VERSION | sed -r 's/(v[0-9]+)(\.[0-9]+)(\.[0-9]+)/\1\2/')
-            make DOCKER_TAG=$DOCKER_TAG_MINOR push
-            # vX.Y.Z -> vX (major only)
-            export DOCKER_TAG_MAJOR=$(echo $DENOPS_VERSION | sed -r 's/(v[0-9]+)(\.[0-9]+)(\.[0-9]+)/\1/')
-            make DOCKER_TAG=$DOCKER_TAG_MAJOR push
-          fi
-          make DOCKER_TAG=latest push
+        run: echo "neovim_version=$(docker run -it base-neovim:'${{ matrix.neovim_version }}' bash -c '/opt/neovim/bin/nvim -v' | head -n 1 | cut -d '-' -f 2)" >> $GITHUB_OUTPUT
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: base-denops
+          path: /tmp
+      - run: docker load --input /tmp/base-denops.tar
+
+      - uses: docker/metadata-action@v4
+        id: metadata
+        with:
+          tags: |
+            type=semver,pattern={{version}}-${{ steps.neovim_version.outputs.neovim_version }},value=${{ env.DENOPS_VERSION }}
+            type=semver,pattern={{major}}.{{minor}}-${{ steps.neovim_version.outputs.neovim_version }},value=${{ env.DENOPS_VERSION }}
+            type=semver,pattern={{major}}-${{ steps.neovim_version.outputs.neovim_version }},value=${{ env.DENOPS_VERSION }}
+            type=sha
+
+      - name: Build denops/vim for ${{ matrix.platform }}
+        uses: docker/build-push-action@v4
+        with:
+          file: Dockerfile.${{ matrix.platform }}-vim
+          cache-from:
+            ghcr.io/peacock0803sz/denops-cache/base-denops:${{ matrix.denops_version }}
+            ghcr.io/peacock0803sz/denops-cache/base-denops
+            ghcr.io/peacock0803sz/denops-cache/base-vim:${{ matrix.vim_version }}
+            ghcr.io/peacock0803sz/denops-cache/base-vim
+            ghcr.io/peacock0803sz/denops-cache/denops-vim:${{ matrix.vim_version }}
+            ghcr.io/peacock0803sz/denops-cache/denops-vim
+          cache-to:
+            ghcr.io/peacock0803sz/denops-cache/denops-vim:${{ matrix.vim_version }}
+            ghcr.io/peacock0803sz/denops-cache/denops-vim
+          build-args: |
+            DENOPS_VERSION=${{ env.DENOPS_VERSION }}
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          platforms: linux/${{ matrix.platform }}
+          push: true
