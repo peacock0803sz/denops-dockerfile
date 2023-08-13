@@ -1,0 +1,24 @@
+# syntax=docker.io/docker/dockerfile:1.4
+#------------------------------------------------------------------------------------------------------------
+ARG DENO_VERSION=v1.32.0  # Note: with `v` prefix
+FROM lukechannings/deno:$DENO_VERSION
+ENV DEBIAN_FRONTEND=noninteractive
+
+LABEL org.opencontainers.image.url https://github.com/orgs/vim-denops/packages/container/package/neovim
+LABEL org.opencontainers.image.source https://github.com/vim-denops/denops-dockerfile
+
+# Prefer to use Debian Backports
+# https://backports.debian.org/
+RUN echo 'deb http://deb.debian.org/debian bullseye-backports main' > /etc/apt/sources.list.d/backports.list
+
+# Runtime environment
+ENV LC_ALL=C.UTF-8
+
+COPY --from=base-neovim /opt/neovim /opt/neovim
+COPY --from=base-denops /denops.vim /root/.local/share/nvim/site/pack/denops/start/denops.vim
+
+# Install denops.vim
+WORKDIR /root/.local/share/nvim/site/pack/denops/start
+RUN deno cache --unstable --no-check=remote */denops/**/*.ts
+
+ENTRYPOINT ["/opt/neovim/bin/nvim"]

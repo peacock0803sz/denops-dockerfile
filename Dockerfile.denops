@@ -1,0 +1,21 @@
+# syntax=docker.io/docker/dockerfile:1.4
+#------------------------------------------------------------------------------------------------------------
+FROM debian:bullseye-backports as denops
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install requirements
+RUN --mount=type=cache,target=/var/cache/apt,sharing=private \
+    --mount=type=cache,target=/var/lib/apt,sharing=private \
+    apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      git
+
+# Install denops.vim
+ARG DENOPS_VERSION=main
+RUN mkdir -p denops.vim \
+ && cd denops.vim \
+ && git init \
+ && git remote add origin https://github.com/vim-denops/denops.vim.git \
+ && git fetch origin ${DENOPS_VERSION} \
+ && git reset --hard FETCH_HEAD

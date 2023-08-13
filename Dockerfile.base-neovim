@@ -1,0 +1,31 @@
+# syntax=docker.io/docker/dockerfile:1.4
+#------------------------------------------------------------------------------------------------------------
+FROM debian:bullseye-backports
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install requirements
+RUN --mount=type=cache,target=/var/cache/apt,sharing=private \
+    --mount=type=cache,target=/var/lib/apt,sharing=private \
+    apt-get update \
+ && apt-get install -y --no-install-recommends \
+      curl \
+      ca-certificates \
+      build-essential \
+      ninja-build \
+      gettext \
+      libtool \
+      libtool-bin \
+      autoconf \
+      automake \
+      cmake \
+      git \
+      g++ \
+      pkg-config \
+      unzip
+
+ARG NEOVIM_VERSION=v0.8.0
+RUN mkdir -p /working && git clone https://github.com/neovim/neovim.git /working
+
+WORKDIR /working
+RUN git switch --detach ${NEOVIM_VERSION} && \
+  make CMAKE_BUILD_TYPE=Release CMAKE_INSTALL_PREFIX=/opt/neovim && make install

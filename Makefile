@@ -2,6 +2,9 @@ DENOPS_VERSION := main
 DOCKER_REGISTRY := ghcr.io/peacock0803sz
 DOCKER_TAG := latest
 
+# amd64 or arm64
+ARCH_NAME := amd64
+
 .DEFAULT_GOAL := help
 
 help:
@@ -14,23 +17,51 @@ build: build-vim build-neovim	## Build
 build-vim: FORCE	## Build (Vim)
 	docker buildx build ${BUILD_ARGS} \
 		--load \
-			--cache-from=${DOCKER_REGISTRY}/vim/cache \
-			--cache-from=${DOCKER_REGISTRY}/vim \
-			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/vim/cache,mode=max \
+			--cache-from=${DOCKER_REGISTRY}/denops-cache/base-vim \
+			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/denops-cache/base-vim,mode=max \
+		-t base-vim \
+		-f Dockerfile.base-vim \
+		.
+	docker buildx build ${BUILD_ARGS} \
+		--load \
+			--cache-from=${DOCKER_REGISTRY}/denops-cache/base-denops \
+			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/denops-cache/base-denops,mode=max \
 		--build-arg DENOPS_VERSION=${DENOPS_VERSION} \
+		-t base-denops \
+		-f Dockerfile.denops \
+		.
+	docker buildx build ${BUILD_ARGS} \
+		--load \
+			--cache-from=${DOCKER_REGISTRY}/denops-cache/base-vim \
+			--cache-from=${DOCKER_REGISTRY}/denops-cache/base-denops \
+			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/denops-cache/vim,mode=max \
 		-t denops-dockerfile/vim \
-		-f Dockerfile.vim \
+		-f Dockerfile.${ARCH_NAME}-vim \
 		.
 
 build-neovim: FORCE	## Build (Neovim)
 	docker buildx build ${BUILD_ARGS} \
 		--load \
-			--cache-from=${DOCKER_REGISTRY}/neovim/cache \
-			--cache-from=${DOCKER_REGISTRY}/neovim \
-			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/neovim/cache,mode=max \
+			--cache-from=${DOCKER_REGISTRY}/denops-cache/base-neovim \
+			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/denops-cache/base-neovim,mode=max \
+		-t base-neovim \
+		-f Dockerfile.base-neovim \
+		.
+	docker buildx build ${BUILD_ARGS} \
+		--load \
+			--cache-from=${DOCKER_REGISTRY}/denops-cache/base-denops \
+			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/denops-cache/base-denops,mode=max \
 		--build-arg DENOPS_VERSION=${DENOPS_VERSION} \
+		-t base-denops \
+		-f Dockerfile.denops \
+		.
+	docker buildx build ${BUILD_ARGS} \
+		--load \
+			--cache-from=${DOCKER_REGISTRY}/denops-cache/base-neovim \
+			--cache-from=${DOCKER_REGISTRY}/denops-cache/base-denops \
+			--cache-to=type=registry,ref=${DOCKER_REGISTRY}/denops-cache/neovim,mode=max \
 		-t denops-dockerfile/neovim \
-		-f Dockerfile.neovim \
+		-f Dockerfile.${ARCH_NAME}-neovim \
 		.
 
 push: push-vim push-neovim	## Push
